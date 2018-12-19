@@ -7,4 +7,4 @@ This is an openAI Gym like environment for multiple agents in the Gridworld task
 * Matplotlib
 * Pandas
 
-![](demo.gif){:height="250px" width="250px"}
+![Demo](demo.gif)
