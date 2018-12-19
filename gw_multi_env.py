@@ -79,7 +79,6 @@ class GridWorldMulti:
 		assert len(goal)==2*n_agents, "All agents have to have a goal"
 		
 		self.gridSize=size
-		self.Pt=[[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]]
 		self.Start=(0,0,4,0)
 		self.n_agents=n_agents
 		self.Goal=(7,7,1,5)
@@ -109,15 +108,15 @@ class GridWorldMulti:
 	# Creates  set of joint actions
 	# Output: returns none. Creates List of joint action tuples 
 	def build_joint_actions(self):
-        joint_acts = list(itertools.permutations(self.actions * self.n_agents, self.n_agents))
+		joint_acts = list(itertools.permutations(self.actions * self.n_agents, self.n_agents))
 
-        act = []
-        for i in joint_acts:
-            f = ()
-            for j in i:
-                f = f + j
-            act.append(tuple(f))
-        self.j_actions = list(set(act))
+		act = []
+		for i in joint_acts:
+			f = ()
+			for j in i:
+				f = f + j
+			act.append(tuple(f))
+		self.j_actions = list(set(act))
 
 	def build_rewards(self):
 		self.R={}
@@ -227,7 +226,7 @@ class GridWorldMulti:
 		for st in range(len(combos)):
 		  probs[combos[st]]=1
 		  for n in range(self.n_agents):
-		    probs[combos[st]]*=dict_lst[n][combos[st][2*n:2*n+2]]
+			probs[combos[st]]*=dict_lst[n][combos[st][2*n:2*n+2]]
 
 		return combos,probs
 
