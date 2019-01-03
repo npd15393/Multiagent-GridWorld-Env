@@ -6,5 +6,6 @@ This is an openAI Gym like environment for multiple agents in the Gridworld task
 * Seaborn
 * Matplotlib
 * Pandas
+PS: Code is tested on Python 3 
 
 ![Demo](demo.gif)
