@@ -74,7 +74,7 @@ class Tile:
 #######################################################################################
 
 class GridWorldMulti:
-	def __init__(self,size=[8,8],n_agents=2,goal=(7,7,1,5))
+	def __init__(self,size=[8,8],n_agents=2,goal=(7,7,1,5)):
 		assert len(size)==2, "Grid has to be 2D"
 		assert len(goal)==2*n_agents, "All agents have to have a goal"
 		
@@ -90,19 +90,40 @@ class GridWorldMulti:
 		self.build_states()
 		self.build_joint_actions()
 		self.build_rewards()
+		self.initialize_renderer()
+
+
+	# Sets up pygame params
+	def initialize_renderer(self):
+		pygame.init()
+		Tile.size = (self.gridSize[0],self.gridSize[1])
+
+		# Set window size and title, and frame delay
+		surfaceSize = (100*self.gridSize[0], 100*self.gridSize[1])
+		windowTitle = 'Multiagent_Grid_World'
+		self.pauseTime = 1  # smaller is faster game
+
+		# Create the window
+		self.surface = pygame.display.set_mode(surfaceSize, 0, 0)
+		# bgColor = 
+		pygame.display.set_caption(windowTitle)
+
+		# Draw objects
+		self.createTiles()
 
 	# Creates state space
 	def build_states(self):
-		self.states=[]*self.n_agents
-
-		for i in range(self.gridSize[0]):
-			for j in range(self.gridSize[1]):
-				for k in range(self.gridSize[0]):
-					for l in range(self.gridSize[1]):
-						s=(i,j,k,l)
-						for na in range(self.n_agents):
+		self.states={}
+		for na in range(self.n_agents):
+			sta=[]
+			for i in range(self.gridSize[0]):
+				for j in range(self.gridSize[1]):
+					for k in range(self.gridSize[0]):
+						for l in range(self.gridSize[1]):
+							s=(i,j,k,l)
 							if self.checkState(s) and not self.checkGoal(s,na):
-								self.states[na].append(s)
+								sta.append(s)
+			self.states[na]=sta
 
 
 	# Creates  set of joint actions
@@ -150,7 +171,7 @@ class GridWorldMulti:
 		s=tuple(s)
 		flg=True
 		for na in range(self.n_agents):
-			flg=flg and (s[2*i:2*i+2] == self.Goal[2*na:2*na+2])
+			flg=flg and (s[2*na:2*na+2] == self.Goal[2*na:2*na+2])
 		return flg
 
 	# checks if state s is wothin the defined gridworld
@@ -158,8 +179,9 @@ class GridWorldMulti:
 		s=np.array(s)
 		if i==None:
 			flg=True
-			for na in range(self.n_agents):
-				 flg=flg and (s[2*n]<self.gridSize[2*n] and s[2*n+1]<self.gridSize[1] and np.all(s>=0)) 
+			for n in range(self.n_agents):
+				print(s)
+				flg=flg and (s[2*n]<self.gridSize[0] and s[2*n+1]<self.gridSize[1] and np.all(s>=0)) 
 			return flg
 		else:
 			n_ss=s[2*i:2*i+2]
@@ -168,7 +190,7 @@ class GridWorldMulti:
 	# checks if state s is is on obstacle or has mutually colliding agents
 	def checkCollision(self,s,i=None):
 		s=tuple(s)
-		temp={}
+		temp=[]
 		if i==None:
 			flg=False
 			for n in range(self.n_agents):
@@ -213,7 +235,7 @@ class GridWorldMulti:
 
 		combos=tuple(list(lst[0]))
 
-		for n in range(1:self.n_agents):
+		for n in range(1,self.n_agents):
 			comb=[zip(x,lst[n]) for x in itertools.permutations(combos,len(lst[n]))]
 
 			chain = itertools.chain(*comb)
@@ -224,9 +246,9 @@ class GridWorldMulti:
 		
 		probs={}
 		for st in range(len(combos)):
-		  probs[combos[st]]=1
-		  for n in range(self.n_agents):
-			probs[combos[st]]*=dict_lst[n][combos[st][2*n:2*n+2]]
+			probs[combos[st]]=1
+			for n in range(self.n_agents):
+				probs[combos[st]]*=dict_lst[n][combos[st][2*n:2*n+2]]
 
 		return combos,probs
 
@@ -236,14 +258,14 @@ class GridWorldMulti:
 	def stochastic_trans(self,s,a,i=None):
 		n_s=list(s)
 		if i==None:
-			ns=[]
+			n_s=()
 			for n in range(self.n_agents):
-				n_s=ns+stochastic_trans(self,s,a[2*n:2*n+2],n)[2*n:2*n+2]
+				n_s=n_s+self.stochastic_trans(s,a[2*n:2*n+2],n)[2*n:2*n+2]
 		else:
 			index = np.random.choice(range(len(self.actions)), p=self.action_probs[a])
 			n_s[2*i:2*i+2]=tuple(np.array(s[2*i:2*i+2])+np.array(self.actions[index]))
 
-		if self.checkBounds(n_s) and not self.checkCollision(n_s,i):	# checkAction(s,a,i) and not checkCollision(n_s,i):
+		if self.checkBounds(n_s,i) and not self.checkCollision(n_s,i):	# checkAction(s,a,i) and not checkCollision(n_s,i):
 			return tuple(n_s)
 		else: return tuple(s)
 
@@ -262,7 +284,7 @@ class GridWorldMulti:
 		pygame.display.update()
 
 		# Set the frame speed by pausing between frames
-		time.sleep(pauseTime)
+		time.sleep(self.pauseTime)
 
 
 	# Draw pygame elements
@@ -289,17 +311,17 @@ class GridWorldMulti:
 				R.append(0)
 			else:
 				j_act=j_act+a[2*n:2*n+2]
-				R.append(self.R[n][s,a])
+				R.append(self.R[s,a,n])
 
-		print('act '+str(act)+' st '+str(s))
+		print('act '+str(j_act)+' st '+str(s))
 		prev_st=s
 
 		self.renderEnv(s)
-		s=self.stochastic_trans(s,act)
+		s=self.stochastic_trans(s,j_act)
 
 		isDone=self.checkAllGoals(s)
 
-		return [prev_st,act,s,R,isDone]
+		return [prev_st,j_act,s,R,isDone]
 
 	def reset(self):
 		return self.Start
@@ -355,52 +377,54 @@ class GridWorldMulti:
 
 # Example agent class
 class Agent:
-	def __init__(self, idx):
+	def __init__(self, idx, env):
 		self.idx=idx
 		self.Q={}
-		self.env=GridWorldMulti([5,6],3,[4,5,])
+		self.env=env
 
 	# Weighted Policy Update for agent i  
 	def build_policy(self,i):
 		maxchg=0
 		for s in states[i]:
+			pass
 			# prev=pi[s,i]
 			# pi[s,i]=0.3*pi[s,i]+0.7*getPolicy(s,i)
 			# maxchg=max(maxchg,np.linalg.norm(pi[s,i]-prev))
 		return maxchg
 
+	def randomAct(self):
+		return self.env.actions[np.random.randint(5)]
+
 	# Make softmax policy for agent i in state s
 	def getPolicy(self, s, det=None):
+		pass
 		"""
 		This function will return an action given a stationary policy given the current state.
 		:param state: The current state
 		:param policy: The current policy
 		:return: The action
 		"""
-		if det==None: det=False
-		policy=[]
+		# if det==None: det=False
+		# policy=[]
 
-		for a in range(len(actions)): 
-			targUtil=self.Q[s,self.idx][a]
-			policy.append(math.exp(targUtil))
+		# for a in range(len(actions)): 
+		# 	targUtil=self.Q[s,self.idx][a]
+		# 	policy.append(math.exp(targUtil))
 
-		policy=[p/sum(policy) for p in policy]
-		return np.array(policy)
+		# policy=[p/sum(policy) for p in policy]
+		# return np.array(policy)
 
 	# Collect data train
 	def train(self):
-		data=[]
-		current_state=env.reset()
-		# Collect data
+		pass
+		# data=[]
+		# current_state=env.reset()
+		# # Collect data
 		
-		isDone=False
-		while not isDone:
-			act=env.j_actions[int(random.random()*len(env.j_actions))]
-			data.append(env.step(current_state,act))
+		# isDone=False
+		# while not isDone:
+		# 	act=env.j_actions[int(random.random()*len(env.j_actions))]
+		# 	data.append(env.step(current_state,act))
 
-		# Process data 
-		# Learn
-
-
-
-
+		# # Process data 
+		# # Learn
